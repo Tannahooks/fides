@@ -6,34 +6,42 @@ from sqlalchemy.engine import Engine
 
 from fideslang import manifests
 from fideslang.models import Dataset, DatasetCollection, DatasetField
-from .utils import get_db_engine, echo_green
+from .utils import echo_green, get_db_engine
 
 
 def get_db_collections_and_fields(engine: Engine) -> Dict[str, Dict[str, List[str]]]:
     """
-    Get the name of every field in each table within database(s)
+    Get the name of every field in every collection of a database.
+
     Args:
-        engine: A sqlalchemy DB connection engine
+        `engine`: A sqlalchemy database connection Engine
 
     Returns:
-        db_tables: An object that contains a mapping of each field in each table of a database
-            (i.e. {schema: {schema.table_name: [fields, ...]}}
+        `db_tables`: A dictionary containing a mapping of every field in
+        every collection of a database. Example:
+            `{ schema_name: { schema_name.collection_name: [field_name_1, field_name_2, ...] } }`
     """
     inspector = sqlalchemy.inspect(engine)
-    schema_exclusion_list = ["information_schema"]
 
+    excluded_schemas = ["information_schema"]
     if engine.dialect.name == "mysql":
-        schema_exclusion_list.extend(["mysql", "performance_schema", "sys"])
+        # Exclude system DB schemas for MySQL databases
+        excluded_schemas.extend(["mysql", "performance_schema", "sys"])
+
+    schemas = [
+        schema
+        for schema in inspector.get_schema_names()
+        if schema not in excluded_schemas
+    ]
 
     db_tables: Dict[str, Dict[str, List]] = {}
-    for schema in inspector.get_schema_names():
-        if schema not in schema_exclusion_list:
-            db_tables[schema] = {}
-            for table in inspector.get_table_names(schema=schema):
-                db_tables[schema][f"{schema}.{table}"] = [
-                    column["name"]
-                    for column in inspector.get_columns(table, schema=schema)
-                ]
+    for schema in schemas:
+        db_tables[schema] = {}
+        for table in inspector.get_table_names(schema=schema):
+            db_tables[schema][f"{schema}.{table}"] = [
+                column["name"] for column in inspector.get_columns(table, schema=schema)
+            ]
+
     return db_tables
 
 
@@ -41,11 +49,10 @@ def create_dataset_collections(
     db_tables: Dict[str, Dict[str, List[str]]]
 ) -> List[Dataset]:
     """
-    Return an object of tables and columns formatted for a Fides manifest
-    with dummy values where needed.
+    Create a list of collections and their contained fields, formatted
+    for a fidesctl manifest. Includes a placeholder description for each.
     """
-
-    table_manifests = [
+    return [
         Dataset(
             fides_key=schema_name,
             name=schema_name,
@@ -68,7 +75,6 @@ def create_dataset_collections(
         )
         for schema_name, schema in db_tables.items()
     ]
-    return table_manifests
 
 
 def create_dataset(engine: Engine, collections: List[DatasetCollection]) -> Dataset:
@@ -87,7 +93,7 @@ def create_dataset(engine: Engine, collections: List[DatasetCollection]) -> Data
     return dataset
 
 
-def generate_dataset(connection_string: str, file_name: str) -> str:
+def generate_dataset(connection_string: str, file_name: str) -> None:
     """
     Given a database connection string, extract all tables/fields from it
     and write out a boilerplate dataset manifest.
@@ -96,5 +102,4 @@ def generate_dataset(connection_string: str, file_name: str) -> str:
     db_collections = get_db_collections_and_fields(db_engine)
     collections = create_dataset_collections(db_collections)
     manifests.write_manifest(file_name, [i.dict() for i in collections], "dataset")
-    echo_green(f"Generated dataset manifest written to {file_name}")
-    return file_name
+    echo_green(f"Successfully generated dataset manifest: {file_name}")
