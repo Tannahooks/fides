@@ -1,9 +1,9 @@
 """This module handles anything related to working with raw manifest files."""
-import glob
 from functools import reduce
+from glob import glob
 from typing import Dict, List, Set, Union
+from yaml import safe_dump, safe_load
 
-import yaml
 from fidesctl.core.utils import echo_red
 
 
@@ -19,7 +19,7 @@ def write_manifest(
         manifest = {resource_type: manifest}
 
     with open(file_name, "w") as manifest_file:
-        yaml.dump(manifest, manifest_file, sort_keys=False, indent=2)
+        safe_dump(manifest, manifest_file, sort_keys=False, indent=2)
 
 
 def load_yaml_into_dict(file_path: str) -> Dict:
@@ -27,7 +27,7 @@ def load_yaml_into_dict(file_path: str) -> Dict:
     This loads yaml files into a dictionary to be used in API calls.
     """
     with open(file_path, "r") as yaml_file:
-        loaded = yaml.safe_load(yaml_file)
+        loaded = safe_load(yaml_file)
         if isinstance(loaded, dict):
             return loaded
 
@@ -75,9 +75,7 @@ def ingest_manifests(manifests_dir: str) -> Dict[str, List[Dict]]:
     else:
         manifest_list = []
         for yml_ending in yml_endings:
-            manifest_list += glob.glob(
-                f"{manifests_dir}/**/*.{yml_ending}", recursive=True
-            )
+            manifest_list += glob(f"{manifests_dir}/**/*.{yml_ending}", recursive=True)
 
         manifests = union_manifests(
             [load_yaml_into_dict(file) for file in manifest_list]
