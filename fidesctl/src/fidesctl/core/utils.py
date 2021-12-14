@@ -7,7 +7,7 @@ from typing import Dict
 import click
 import jwt
 import requests
-import sqlalchemy
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
 logger = logging.getLogger("server_api")
@@ -36,17 +36,20 @@ def get_db_engine(connection_string: str) -> Engine:
     Use SQLAlchemy to create a DB engine.
     """
     try:
-        engine = sqlalchemy.create_engine(connection_string)
+        engine = create_engine(connection_string)
     except Exception as err:
-        echo_red("Failed to create engine!")
+        echo_red("Failed to create database engine")
         raise SystemExit(err)
 
     try:
         with engine.begin() as connection:
             connection.execute("SELECT 1")
     except Exception as err:
-        echo_red(f"Database connection failed with engine:\n{engine}!")
+        echo_red(
+            f'Failed to connect to a database using connection string "{engine.url}"'
+        )
         raise SystemExit(err)
+
     return engine
 
 
