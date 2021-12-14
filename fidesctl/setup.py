@@ -12,15 +12,15 @@ install_requires = open("requirements.txt").read().strip().split("\n")
 dev_requires = open("dev-requirements.txt").read().strip().split("\n")
 
 # Human-Readable/Reusable Extras
-postgres_connector = "psycopg2-binary==2.9.0"
-mysql_connector = "pymysql==1.0.0"
-fastapi = "fastapi==0.68"
-uvicorn = "uvicorn==0.15"
+POSTGRES_CONNECTOR = "psycopg2-binary==2.9.0"
+MYSQL_CONNECTOR = "pymysql==1.0.0"
+FASTAPI = "fastapi==0.68"
+UVICORN = "uvicorn==0.15"
 
 extras = {
-    "postgres": [postgres_connector],
-    "mysql": [mysql_connector],
-    "webserver": [fastapi, uvicorn, postgres_connector],
+    "postgres": [POSTGRES_CONNECTOR],
+    "mysql": [MYSQL_CONNECTOR],
+    "webserver": [FASTAPI, UVICORN, POSTGRES_CONNECTOR],
 }
 extras["all"] = sum(extras.values(), [])
 
